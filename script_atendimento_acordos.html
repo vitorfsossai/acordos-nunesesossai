@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Script de Atendimento - Cobranças via WhatsApp</title>
+<style>
+:root{
+  --navy:#031D38;--navy2:#0b3158;--gold:#c9a34c;--bg:#f3f5f7;--card:#fff;
+  --text:#18212a;--muted:#68747e;--border:#dce2e7;--green:#26734d;--greenbg:#edf7f1;
+  --amber:#875f10;--amberbg:#fff7e3;--red:#923b3b;--redbg:#fff0f0;--bluebg:#eef5fb;
+}
+*{box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+.shell{max-width:1200px;margin:auto;padding:22px}
+.hero{background:var(--navy);color:#fff;border-radius:18px;padding:26px;margin-bottom:18px}
+.hero small{color:#e4d3a7;letter-spacing:.08em;text-transform:uppercase}
+.hero h1{margin:9px 0 7px;font-size:27px}
+.hero p{margin:0;color:#d4dce4;font-size:13px;line-height:1.5;max-width:760px}
+.toolbar{position:sticky;top:0;z-index:5;background:rgba(243,245,247,.96);padding:10px 0}
+.search{width:100%;padding:13px 15px;border:1px solid var(--border);border-radius:11px;font-size:15px;background:#fff}
+.quick{display:flex;gap:7px;overflow:auto;padding:9px 0 3px}
+.quick a{white-space:nowrap;text-decoration:none;color:var(--navy);background:#fff;border:1px solid var(--border);padding:7px 10px;border-radius:999px;font-size:11px;font-weight:bold}
+.layout{display:grid;grid-template-columns:1fr 290px;gap:16px;align-items:start}
+.main{display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--border);border-radius:14px;padding:18px}
+.card h2{font-size:18px;margin:0 0 5px}
+.subtitle{color:var(--muted);font-size:12px;margin:0 0 14px;line-height:1.5}
+.flow{display:grid;gap:9px}
+.row{border:1px solid #e5e9ed;border-radius:10px;padding:12px}
+.row-title{display:flex;justify-content:space-between;gap:10px;align-items:flex-start}
+.row strong{font-size:13px}
+.cmd{display:inline-flex;align-items:center;gap:6px;background:var(--bluebg);color:#164d79;border-radius:7px;padding:6px 8px;font-family:Consolas,monospace;font-size:12px;font-weight:bold;cursor:pointer;border:0}
+.cmd:hover{filter:brightness(.97)}
+.copy-note{font-size:10px;color:#84909a;margin-left:5px}
+.row p{font-size:12px;color:#5d6872;line-height:1.5;margin:8px 0 0}
+.arrow{color:#9aa4ac;text-align:center;font-size:16px}
+.alert{border-radius:10px;padding:11px 12px;font-size:12px;line-height:1.5;margin-top:10px}
+.alert.warn{background:var(--amberbg);color:#674b12}
+.alert.red{background:var(--redbg);color:#733131}
+.alert.green{background:var(--greenbg);color:#275c40}
+.options{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;margin-top:10px}
+.option{background:#f8f9fa;border:1px solid #e3e7ea;border-radius:9px;padding:10px}
+.option b{display:block;font-size:12px;margin-bottom:7px}
+.sidebar{position:sticky;top:78px;display:grid;gap:12px}
+.sidecard{background:#fff;border:1px solid var(--border);border-radius:14px;padding:15px}
+.sidecard h3{margin:0 0 10px;font-size:14px}
+.checklist{list-style:none;padding:0;margin:0;display:grid;gap:8px}
+.checklist li{font-size:11px;line-height:1.4;color:#56636e;padding-left:15px;position:relative}
+.checklist li:before{content:"";width:6px;height:6px;border-radius:50%;background:var(--gold);position:absolute;left:0;top:5px}
+.steps{counter-reset:s;list-style:none;padding:0;margin:0;display:grid;gap:10px}
+.steps li{counter-increment:s;font-size:12px;line-height:1.45;padding-left:28px;position:relative}
+.steps li:before{content:counter(s);position:absolute;left:0;top:0;background:var(--navy);color:#fff;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:bold}
+.hidden{display:none!important}
+.toast{position:fixed;right:18px;bottom:18px;background:#17212a;color:#fff;padding:10px 13px;border-radius:9px;font-size:12px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none;z-index:20}
+.toast.show{opacity:1;transform:none}
+@media(max-width:850px){
+ .shell{padding:10px}.hero{padding:20px 16px;border-radius:14px}.hero h1{font-size:22px}
+ .layout{display:block}.sidebar{position:static;margin-top:14px}.options{grid-template-columns:1fr}
+ .toolbar{top:0}.card{padding:14px}.row-title{display:block}.cmd{margin-top:7px;min-height:38px}
+}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="hero">
+ <small>Nunes &amp; Sossai · Uso interno</small>
+ <h1>Script de Atendimento — Cobranças</h1>
+ <p>Guia rápido para conduzir atendimentos via WhatsApp. Identifique a situação, utilize o comando indicado e siga a orientação operacional.</p>
+</header>
+
+<div class="toolbar">
+ <input id="search" class="search" placeholder="Buscar situação ou comando... Ex.: já pagou, assinatura, entrada, /sicoob">
+ <nav class="quick">
+  <a href="#inicio">Início</a><a href="#especiais">Situações especiais</a><a href="#negociacao">Negociação</a>
+  <a href="#formalizacao">Formalização</a><a href="#pagamento">Pagamento</a><a href="#encerramento">Encerramento</a><a href="#programada">Mensagem programada</a>
+ </nav>
+</div>
+
+<div class="layout">
+<main class="main">
+
+<section class="card searchable" id="inicio">
+ <h2>1. Início do atendimento</h2>
+ <p class="subtitle">Primeiro confirme a identidade. Não mencione dívida antes dessa confirmação.</p>
+ <div class="flow">
+  <div class="row"><div class="row-title"><strong>Primeiro contato</strong><button class="cmd" data-copy="/saudacoes">/saudacoes <span>⧉</span></button></div><p>Abordagem neutra para confirmar se o número pertence ao devedor.</p></div>
+  <div class="arrow">↓</div>
+  <div class="options">
+   <div class="option"><b>Não é a pessoa</b><button class="cmd" data-copy="/contato-negativa">/contato-negativa ⧉</button><p>Enviar e encerrar.</p></div>
+   <div class="option"><b>Confirmou identidade</b><button class="cmd" data-copy="/agradecer">/agradecer ⧉</button><p>Depois apresente a cobrança.</p></div>
+   <div class="option"><b>Resposta evasiva</b><button class="cmd" data-copy="/assuntos-pessoais">/assuntos-pessoais ⧉</button><p>Use antes de revelar o assunto.</p></div>
+  </div>
+ </div>
+ <div class="alert red"><b>Regra de sigilo:</b> nunca mencione dívida antes da confirmação de identidade.</div>
+</section>
+
+<section class="card searchable">
+ <h2>2. Apresentação da cobrança</h2>
+ <p class="subtitle">Após o /agradecer, selecione a empresa credora e depois envie imediatamente a nota promissória escaneada.</p>
+ <div class="options">
+  <div class="option"><b>PINHEIRO / ELISA ENXOVAIS</b><button class="cmd" data-copy="/pinheiro-atend">/pinheiro-atend ⧉</button></div>
+  <div class="option"><b>OLIVEIRA / TAMILY</b><button class="cmd" data-copy="/oliveira-atend">/oliveira-atend ⧉</button></div>
+  <div class="option"><b>FAVORETTO / EDU</b><button class="cmd" data-copy="/favoretto-atend">/favoretto-atend ⧉</button></div>
+  <div class="option"><b>MARCELO / BY MARÍLIA</b><button class="cmd" data-copy="/marcelo-atend">/marcelo-atend ⧉</button></div>
+ </div>
+ <div class="alert warn"><b>Depois:</b> envie a nota promissória e aguarde a resposta do devedor antes de avançar.</div>
+</section>
+
+<section class="card searchable" id="especiais">
+ <h2>3. Situações especiais</h2>
+ <p class="subtitle">Resolva estas situações antes de entrar na negociação.</p>
+
+ <div class="row">
+  <div class="row-title"><strong>Devedor diz que já pagou</strong><button class="cmd" data-copy="/diz-que-ja-pagou">/diz-que-ja-pagou ⧉</button></div>
+  <p>Solicite comprovante. Não discuta nem confronte. Analise a nota e confirme o pagamento com a empresa quando necessário.</p>
+  <div class="options">
+   <div class="option"><b>Mandou comprovante</b><button class="cmd" data-copy="/enviou-comprovante">/enviou-comprovante ⧉</button><p>Em seguida, confirmar com a empresa.</p></div>
+   <div class="option"><b>Diz que pagou em mãos</b><button class="cmd" data-copy="/pagou-em-maos">/pagou-em-maos ⧉</button><p>Em seguida, confirmar com a empresa.</p></div>
+   <div class="option"><b>Pagamento confirmado</b><button class="cmd" data-copy="/pagamento-confirmado">/pagamento-confirmado ⧉</button></div>
+   <div class="option"><b>Pagamento não confirmado</b><button class="cmd" data-copy="/pagamento-nao-confirmado">/pagamento-nao-confirmado ⧉</button><p>Se voltar atrás, retome a tentativa de acordo.</p></div>
+  </div>
+ </div>
+
+ <div class="row">
+  <div class="row-title"><strong>Pediu relação/detalhamento de produtos</strong><button class="cmd" data-copy="/produtos">/produtos ⧉</button></div>
+  <p>Não enviar lista ou detalhamento. Responder conforme o padrão.</p>
+ </div>
+
+ <div class="row">
+  <div class="row-title"><strong>Desconhece a empresa ou pede endereço</strong><button class="cmd" data-copy="/confirmar-assinatura">/confirmar-assinatura ⧉</button></div>
+  <p>Direcione a conversa para a assinatura da nota. Aguarde resposta objetiva.</p>
+  <div class="options">
+   <div class="option"><b>Negou a assinatura</b><button class="cmd" data-copy="/negou-assinatura">/negou-assinatura ⧉</button><p>Encaminhar ao responsável.</p></div>
+   <div class="option"><b>Confirmou a assinatura</b><button class="cmd" data-copy="/assinatura-confirmada">/assinatura-confirmada ⧉</button><p>Aguardar e seguir para negociação.</p></div>
+  </div>
+  <div class="alert warn">Conforme o roteiro interno, resposta evasiva sobre a assinatura deve ser tratada como negativa e encaminhada ao responsável.</div>
+ </div>
+</section>
+
+<section class="card searchable" id="negociacao">
+ <h2>4. Negociação</h2>
+ <p class="subtitle">Quando houver interesse, tenha os valores e as opções prontas antes de enviar os comandos.</p>
+
+ <div class="row">
+  <div class="row-title"><strong>Demonstrou interesse em acordo</strong><button class="cmd" data-copy="/valor-atualizado">/valor-atualizado ⧉</button></div>
+  <p>Tenha o valor atualizado em mãos. Após o comando, envie manualmente o valor atualizado.</p>
+  <div class="alert red"><b>Obrigatório:</b> não envie o comando sem já saber o valor atualizado.</div>
+ </div>
+
+ <div class="row">
+  <div class="row-title"><strong>Apresentar opções de acordo</strong><button class="cmd" data-copy="/proposta-inicial">/proposta-inicial ⧉</button></div>
+  <p>Monte antes uma proposta clara com entrada e parcelas. Ofereça mais de uma opção para facilitar a escolha.</p>
+  <div class="alert warn"><b>Conferência:</b> nunca envie proposta sem revisar os valores. O roteiro sugere utilizar o ChatGPT como apoio para montar as opções, mas exige edição e conferência antes do envio.</div>
+ </div>
+
+ <div class="options">
+  <div class="option"><b>Não concorda com a entrada</b><button class="cmd" data-copy="/entrada-ruim">/entrada-ruim ⧉</button><p>Avalie ajuste dentro da margem autorizada. O roteiro orienta tentar receber ao menos cerca de R$ 100,00 de entrada.</p></div>
+  <div class="option"><b>Diz que não consegue pagar</b><button class="cmd" data-copy="/disse-que-nao-pode">/disse-que-nao-pode ⧉</button><p>Use quando alegar preço alto, dificuldade ou falta de dinheiro.</p></div>
+  <div class="option"><b>Recusou efetivamente a proposta</b><button class="cmd" data-copy="/negou-proposta">/negou-proposta ⧉</button><p>Mantenha cordialidade, não discuta e, se for o caso, siga para encerramento.</p></div>
+ </div>
+</section>
+
+<section class="card searchable" id="formalizacao">
+ <h2>5. Formalização do acordo</h2>
+ <p class="subtitle">Use esta etapa somente depois de o devedor aceitar as condições.</p>
+ <div class="flow">
+  <div class="row"><div class="row-title"><strong>Aceitou a proposta</strong><button class="cmd" data-copy="/perfeito">/perfeito ⧉</button></div></div>
+  <div class="arrow">↓</div>
+  <div class="row"><div class="row-title"><strong>Termo pronto para assinatura</strong><button class="cmd" data-copy="/segue-termo-assinatura">/segue-termo-assinatura ⧉</button></div><p>Elabore o termo conforme combinado, salve na pasta e envie. Depois confira a assinatura antes de prosseguir.</p></div>
+ </div>
+ <div class="alert red"><b>Atenção:</b> conforme o roteiro, o termo deve estar assinado em todas as páginas para homologação.</div>
+ <div class="alert warn"><b>Endereço atualizado:</b> obtenha o endereço atual do devedor. Se o acordo for fechado antes disso, insista na obtenção posteriormente.</div>
+</section>
+
+<section class="card searchable" id="pagamento">
+ <h2>6. Pagamento</h2>
+ <p class="subtitle">Antes de enviar os dados, confirme qual conta deve ser utilizada para aquela empresa.</p>
+ <div class="options">
+  <div class="option"><b>Conta SICOOB</b><button class="cmd" data-copy="/sicoob">/sicoob ⧉</button></div>
+  <div class="option"><b>Conta Itaú</b><button class="cmd" data-copy="/itau">/itau ⧉</button></div>
+ </div>
+</section>
+
+<section class="card searchable" id="encerramento">
+ <h2>7. Encerramento</h2>
+ <div class="options">
+  <div class="option"><b>Tudo regularizado</b><button class="cmd" data-copy="/encerramento">/encerramento ⧉</button></div>
+  <div class="option"><b>Não houve acordo</b><button class="cmd" data-copy="/nao-quer-acordo">/nao-quer-acordo ⧉</button></div>
+  <div class="option"><b>Parou de responder</b><button class="cmd" data-copy="/ausencia-de-retorno">/ausencia-de-retorno ⧉</button></div>
+ </div>
+</section>
+
+<section class="card searchable" id="programada">
+ <h2>8. Depois do acordo: mensagem programada</h2>
+ <p class="subtitle">Após o acordo firmado, assinado e protocolado, cadastre lembretes automáticos de pagamento no WhatsApp.</p>
+ <ol class="steps">
+  <li>Na conversa, abra a aba <b>ATENDIMENTO</b> e clique em <b>MENSAGENS PROGRAMADAS</b>.</li>
+  <li>Clique em <b>Adicionar</b> e preencha nome/descrição.</li>
+  <li>Em <b>DATA</b>, informe a data do primeiro pagamento. Se houver entrada, faça programação separada para entrada e parcelas.</li>
+  <li>Em <b>RECORRÊNCIA</b>, altere “Não se repete” para <b>Personalizar</b>.</li>
+  <li>Em “repetir a cada”, selecione <b>meses</b> e depois <b>no dia informado</b>.</li>
+  <li>Em “termina”, escolha <b>Depois de</b> e informe a quantidade de parcelas.</li>
+  <li>Escreva mensagem simples e direta, lembrando também a conta de pagamento. Use o “+” para adicionar as mensagens.</li>
+  <li>Confira tudo e clique em <b>ENVIAR</b>.</li>
+ </ol>
+</section>
+
+</main>
+
+<aside class="sidebar">
+ <div class="sidecard">
+  <h3>Fluxo rápido</h3>
+  <ul class="checklist">
+   <li>Confirmar identidade</li>
+   <li>Apresentar empresa</li>
+   <li>Enviar nota promissória</li>
+   <li>Resolver eventual situação especial</li>
+   <li>Informar valor atualizado</li>
+   <li>Apresentar propostas</li>
+   <li>Formalizar e colher assinatura</li>
+   <li>Enviar dados de pagamento</li>
+   <li>Programar lembretes</li>
+  </ul>
+ </div>
+ <div class="sidecard">
+  <h3>Regras que não podem passar</h3>
+  <ul class="checklist">
+   <li>Não revelar dívida antes de confirmar identidade.</li>
+   <li>Não discutir quando alegar pagamento.</li>
+   <li>Confirmar comprovante com a empresa quando necessário.</li>
+   <li>Conferir todos os valores antes de enviar proposta.</li>
+   <li>Conferir assinatura do termo.</li>
+   <li>Buscar endereço atualizado do devedor.</li>
+  </ul>
+ </div>
+</aside>
+</div>
+</div>
+<div id="toast" class="toast">Comando copiado</div>
+<script>
+const toast=document.getElementById("toast");
+document.querySelectorAll("[data-copy]").forEach(btn=>{
+ btn.addEventListener("click",async()=>{
+  const text=btn.dataset.copy;
+  try{await navigator.clipboard.writeText(text)}
+  catch(e){
+   const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove();
+  }
+  toast.textContent=text+" copiado";
+  toast.classList.add("show");
+  setTimeout(()=>toast.classList.remove("show"),1200);
+ });
+});
+document.getElementById("search").addEventListener("input",e=>{
+ const q=e.target.value.toLowerCase().trim();
+ document.querySelectorAll(".searchable").forEach(card=>{
+  card.classList.toggle("hidden",q && !card.innerText.toLowerCase().includes(q));
+ });
+});
+</script>
+</body>
+</html>
