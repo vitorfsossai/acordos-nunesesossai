@@ -1,0 +1,123 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Gerador de Propostas - Nunes & Sossai</title>
+<style>
+:root{--navy:#031D38;--bg:#f3f5f7;--card:#fff;--text:#17202a;--muted:#697681;--border:#dce2e7;--bluebg:#eef5fb}
+*{box-sizing:border-box} body{margin:0;background:var(--bg);font-family:Arial,Helvetica,sans-serif;color:var(--text)}
+.shell{max-width:1100px;margin:auto;padding:22px}.hero{background:var(--navy);color:#fff;border-radius:18px;padding:26px;margin-bottom:18px}
+.hero h1{margin:0 0 7px;font-size:27px}.hero p{margin:0;color:#d7dfe6;font-size:13px;line-height:1.5}
+.layout{display:grid;grid-template-columns:420px 1fr;gap:18px;align-items:start}.panel{background:#fff;border:1px solid var(--border);border-radius:14px;padding:18px}
+.form-panel{position:sticky;top:12px}.panel h2{margin:0 0 5px;font-size:18px}.desc{margin:0 0 16px;color:var(--muted);font-size:12px}
+.section{border-top:1px solid #edf0f2;margin-top:16px;padding-top:16px}.section:first-of-type{border-top:0;margin-top:0;padding-top:0}
+.section h3{margin:0 0 11px;font-size:12px;text-transform:uppercase;letter-spacing:.05em;color:#65717c}.field{margin-bottom:12px}
+.field label{display:block;font-size:12px;font-weight:bold;margin-bottom:5px}input,select{width:100%;padding:10px 11px;border:1px solid #cbd3da;border-radius:8px;background:#fff;color:#111;font-size:14px}
+.inline{display:grid;grid-template-columns:1fr 1fr;gap:9px}.hint{font-size:11px;color:#77838d;line-height:1.4;margin-top:5px}
+.actions{display:flex;gap:9px;flex-wrap:wrap;margin-top:17px}button{border:0;border-radius:8px;padding:10px 13px;font-weight:bold;font-size:13px;cursor:pointer}
+.primary{background:var(--navy);color:#fff}.secondary{background:#e8edf1;color:#17202a}
+.summary{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:15px}.metric{background:#f7f9fa;border:1px solid #e4e8eb;border-radius:10px;padding:11px}
+.metric small{display:block;color:#77838d;font-size:10px;margin-bottom:4px}.metric strong{font-size:16px}
+.message-box{background:#fff;border:1px solid var(--border);border-radius:12px;padding:18px;white-space:pre-wrap;font-size:14px;line-height:1.6;min-height:290px}
+.copy-row{display:flex;justify-content:flex-end;margin-top:10px}.copy-btn{background:var(--bluebg);color:#164d79}
+.toast{position:fixed;right:18px;bottom:18px;background:#17212a;color:#fff;padding:10px 13px;border-radius:9px;font-size:12px;opacity:0;transform:translateY(8px);transition:.2s;pointer-events:none}
+.toast.show{opacity:1;transform:none}.option-table{width:100%;border-collapse:collapse;margin-top:14px;font-size:12px}.option-table th,.option-table td{border-bottom:1px solid #e6eaed;padding:9px 6px;text-align:left}
+.option-table th{color:#65717c;font-size:10px;text-transform:uppercase}
+@media(max-width:900px){.layout{grid-template-columns:1fr}.form-panel{position:static}}
+@media(max-width:600px){.shell{padding:10px}.hero{padding:20px 16px;border-radius:14px}.hero h1{font-size:22px}.panel{padding:14px}.inline{grid-template-columns:1fr}input,select{font-size:16px;min-height:44px}.actions{display:grid;grid-template-columns:1fr}.actions button{width:100%;min-height:45px}.summary{grid-template-columns:1fr}.message-box{font-size:13px}}
+</style>
+</head>
+<body>
+<div class="shell">
+<header class="hero"><h1>Gerador de Propostas</h1><p>Monte automaticamente opções à vista e parceladas para envio pelo WhatsApp.</p></header>
+<div class="layout">
+<section class="panel form-panel">
+<h2>Dados da negociação</h2><p class="desc">Preencha os critérios e o sistema monta as opções automaticamente.</p>
+
+<div class="section"><div class="field"><label for="divida">Valor atualizado da dívida</label><input id="divida" inputmode="decimal" placeholder="Ex.: 1.500,00"></div></div>
+
+<div class="section"><h3>Entrada</h3><div class="inline">
+<div class="field"><label for="entradaTipo">Tipo</label><select id="entradaTipo"><option value="percentual">Percentual</option><option value="fixo">Valor fixo</option></select></div>
+<div class="field"><label for="entradaValor">Valor</label><input id="entradaValor" inputmode="decimal" placeholder="Ex.: 30"></div>
+</div><div class="hint">Se percentual, informe apenas o número. Ex.: 30 para 30%.</div></div>
+
+<div class="section"><h3>Parcelamento</h3><div class="inline">
+<div class="field"><label for="maxParcelas">Quantidade máxima</label><input id="maxParcelas" type="number" min="1" max="24" value="6"></div>
+<div class="field"><label for="jurosParcela">Juros por parcela</label><input id="jurosParcela" inputmode="decimal" value="2" placeholder="Ex.: 2"></div>
+</div><div class="hint">Exemplo: 2% × 4 parcelas = 8% de acréscimo no total daquela opção.</div></div>
+
+<div class="section"><h3>Pagamento parcial / bloqueio</h3><div class="field"><label for="abatimento">Valor a descontar do saldo</label><input id="abatimento" inputmode="decimal" placeholder="Ex.: 196,00"></div>
+<div class="hint">Use para pagamento parcial, bloqueio judicial ou outro valor já recebido.</div></div>
+
+<div class="section"><h3>Pagamento à vista</h3><div class="inline">
+<div class="field"><label for="descontoTipo">Tipo de desconto</label><select id="descontoTipo"><option value="percentual">Percentual</option><option value="fixo">Valor fixo</option></select></div>
+<div class="field"><label for="descontoValor">Desconto</label><input id="descontoValor" inputmode="decimal" value="10" placeholder="Ex.: 10"></div>
+</div></div>
+
+<div class="actions"><button id="gerar" class="primary" type="button">Gerar proposta</button><button id="limpar" class="secondary" type="button">Limpar</button></div>
+</section>
+
+<section class="panel">
+<h2>Proposta pronta</h2><p class="desc">Revise antes de enviar ao devedor.</p>
+<div class="summary">
+<div class="metric"><small>Dívida informada</small><strong id="mDivida">R$ 0,00</strong></div>
+<div class="metric"><small>Abatimento</small><strong id="mAbatimento">R$ 0,00</strong></div>
+<div class="metric"><small>Saldo-base</small><strong id="mSaldo">R$ 0,00</strong></div>
+</div>
+<div id="message" class="message-box">Preencha os campos e clique em “Gerar proposta”.</div>
+<div class="copy-row"><button id="copiar" class="copy-btn" type="button">Copiar mensagem</button></div>
+<table class="option-table"><thead><tr><th>Opção</th><th>Total</th><th>Entrada</th><th>Parcelas</th></tr></thead><tbody id="tabela"></tbody></table>
+</section>
+</div>
+</div>
+<div id="toast" class="toast">Mensagem copiada</div>
+<script>
+(function(){
+const $=id=>document.getElementById(id);
+function parseMoney(text){let s=String(text||"").trim().replace(/\s/g,"").replace("R$","");if(!s)return 0;if(s.includes(","))s=s.replace(/\./g,"").replace(",",".");return Number(s)||0}
+function money(n){return Number(n||0).toLocaleString("pt-BR",{style:"currency",currency:"BRL"})}
+function calcEntrada(base){const valor=parseMoney($("entradaValor").value);return $("entradaTipo").value==="percentual"?base*(valor/100):Math.min(valor,base)}
+function calcVista(base){const valor=parseMoney($("descontoValor").value);const desconto=$("descontoTipo").value==="percentual"?base*(valor/100):valor;return Math.max(0,base-desconto)}
+function generate(){
+ const divida=parseMoney($("divida").value);
+ const abatimento=Math.max(0,parseMoney($("abatimento").value));
+ const saldo=Math.max(0,divida-abatimento);
+ const maxParcelas=Math.max(1,Math.floor(Number($("maxParcelas").value)||1));
+ const jurosPorParcela=Math.max(0,parseMoney($("jurosParcela").value));
+ const entradaBase=calcEntrada(saldo);
+ const vista=calcVista(saldo);
+
+ $("mDivida").textContent=money(divida);$("mAbatimento").textContent=money(abatimento);$("mSaldo").textContent=money(saldo);
+
+ let linhas=[];let tabelaHTML="";let numero=1;
+ linhas.push(`${numero}. À vista: ${money(vista)}`);
+ tabelaHTML+=`<tr><td>${numero}. À vista</td><td>${money(vista)}</td><td>—</td><td>—</td></tr>`;
+ numero++;
+
+ for(let qtd=1;qtd<=maxParcelas;qtd++){
+   const acrescimoPercentual=jurosPorParcela*qtd;
+   const totalComJuros=saldo*(1+acrescimoPercentual/100);
+   const entrada=Math.min(entradaBase,totalComJuros);
+   const restante=Math.max(0,totalComJuros-entrada);
+   const valorParcela=restante/qtd;
+   const texto=entrada>0
+     ? `${numero}. Entrada de ${money(entrada)} + ${qtd}x de ${money(valorParcela)} (total ${money(totalComJuros)})`
+     : `${numero}. ${qtd}x de ${money(valorParcela)} (total ${money(totalComJuros)})`;
+   linhas.push(texto);
+   tabelaHTML+=`<tr><td>${numero}. ${qtd}x</td><td>${money(totalComJuros)}</td><td>${entrada>0?money(entrada):"—"}</td><td>${qtd} × ${money(valorParcela)}</td></tr>`;
+   numero++;
+ }
+
+ const intro=`O valor atualizado da dívida é de ${money(divida)}.${abatimento>0?` Considerando o valor já pago/bloqueado de ${money(abatimento)}, o saldo para negociação é de ${money(saldo)}.`:""}\n\nSeguem as opções para pagamento:\n\n`;
+ $("message").textContent=intro+linhas.join("\n")+"\n\nPor favor, informe qual opção fica melhor para você.";
+ $("tabela").innerHTML=tabelaHTML;
+}
+$("gerar").addEventListener("click",generate);
+$("limpar").addEventListener("click",()=>{["divida","entradaValor","abatimento","descontoValor"].forEach(id=>$(id).value="");$("maxParcelas").value="6";$("jurosParcela").value="2";$("entradaTipo").value="percentual";$("descontoTipo").value="percentual";$("message").textContent='Preencha os campos e clique em “Gerar proposta”.';$("tabela").innerHTML="";$("mDivida").textContent="R$ 0,00";$("mAbatimento").textContent="R$ 0,00";$("mSaldo").textContent="R$ 0,00"});
+$("copiar").addEventListener("click",async()=>{const text=$("message").textContent;try{await navigator.clipboard.writeText(text)}catch(e){const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();document.execCommand("copy");ta.remove()}const toast=$("toast");toast.classList.add("show");setTimeout(()=>toast.classList.remove("show"),1200)});
+let timer;document.querySelectorAll("input,select").forEach(el=>{el.addEventListener("input",()=>{clearTimeout(timer);timer=setTimeout(generate,180)});el.addEventListener("change",generate)});
+})();
+</script>
+</body>
+</html>
