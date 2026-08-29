@@ -52,6 +52,9 @@ body{
   padding:18px;
   position:sticky;
   top:14px;
+  max-height:calc(100vh - 28px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
 }
 .form-panel h2,.preview-head h2{
   margin:0;
@@ -62,6 +65,72 @@ body{
   color:var(--muted);
   font-size:12px;
 }
+
+
+.payment-mode{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+  margin-bottom:12px;
+}
+.payment-mode label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px;
+  border:1px solid #d7dde2;
+  border-radius:8px;
+  background:#f8fafb;
+  cursor:pointer;
+  font-size:12px;
+  font-weight:700;
+}
+.payment-mode input{width:auto}
+.auto-payment-box{
+  padding:12px;
+  border:1px solid #dce2e7;
+  border-radius:10px;
+  background:#f8fafb;
+}
+.auto-payment-preview{
+  margin-top:8px;
+  padding:10px;
+  border-radius:8px;
+  background:#eef5fb;
+  color:#27445e;
+  font-size:11px;
+  line-height:1.5;
+}
+.readonly-value{
+  background:#eef2f5 !important;
+  color:#40505d;
+}
+.block-value-box{
+  margin-top:10px;
+  padding:10px;
+  border:1px solid #ead9a8;
+  border-radius:8px;
+  background:#fff9e9;
+}
+.hidden-field{display:none!important}
+
+.auto-address{
+  padding:10px 11px;
+  border:1px solid #cbd3da;
+  border-radius:8px;
+  background:#f7f9fa;
+  color:#263746;
+  font-size:12px;
+  line-height:1.45;
+  min-height:40px;
+}
+.auto-address-label{
+  display:block;
+  margin-bottom:5px;
+  font-size:12px;
+  font-weight:700;
+}
+
 .form-section{
   border-top:1px solid #ebeff2;
   margin-top:16px;
@@ -351,12 +420,12 @@ button{
 
       <div class="form-section">
         <div class="field">
-          <label for="enderecamento">Endereçamento</label>
-          <input id="enderecamento" value="Ao Núcleo de Justiça 4.0 - Execução de Título Extrajudicial - Gabinete 02.">
-        </div>
-        <div class="field">
           <label for="processo">Número do processo</label>
           <input id="processo" placeholder="7003335-11.2026.8.22.0000">
+        </div>
+        <div class="field">
+          <span class="auto-address-label">Endereçamento automático</span>
+          <div id="enderecamentoAuto" class="auto-address">Digite o número completo do processo para identificar automaticamente o endereçamento.</div>
         </div>
         <div class="field">
           <label for="empresa">Empresa credora</label>
@@ -385,7 +454,7 @@ button{
         <div class="field">
           <label for="valor">Valor atualizado</label>
           <input id="valor" inputmode="decimal" placeholder="Ex.: 1.320,78">
-          <div class="hint">O valor por extenso é preenchido automaticamente.</div>
+          <div id="valorHint" class="hint">Calculado automaticamente: entrada + parcelas + eventual valor bloqueado.</div>
         </div>
         <div class="two">
           <div class="field">
@@ -401,10 +470,45 @@ button{
 
       <div class="form-section">
         <h3>Forma de pagamento</h3>
-        <div class="field">
+
+        <div class="payment-mode">
+          <label><input type="radio" name="modoPagamento" value="automatico" checked> Gerar cláusula automaticamente</label>
+          <label><input type="radio" name="modoPagamento" value="manual"> Escrever cláusula manualmente</label>
+        </div>
+
+        <div id="pagamentoAutomatico" class="auto-payment-box">
+          <div class="two">
+            <div class="field">
+              <label for="valorEntrada">Valor da entrada</label>
+              <input id="valorEntrada" inputmode="decimal" placeholder="Ex.: 500,00">
+            </div>
+            <div class="field">
+              <label for="dataEntrada">Data da entrada</label>
+              <input id="dataEntrada" type="date">
+            </div>
+          </div>
+          <div class="two">
+            <div class="field">
+              <label for="quantidadeParcelas">Quantidade de parcelas</label>
+              <input id="quantidadeParcelas" type="number" min="0" step="1" placeholder="Ex.: 4">
+            </div>
+            <div class="field">
+              <label for="valorParcela">Valor de cada parcela</label>
+              <input id="valorParcela" inputmode="decimal" placeholder="Ex.: 300,00">
+            </div>
+          </div>
+          <div class="field">
+            <label for="primeiroVencimento">Vencimento da primeira parcela</label>
+            <input id="primeiroVencimento" type="date">
+            <div class="hint">Pré-definido para o mesmo dia do mês seguinte. Pode ser alterado.</div>
+          </div>
+          <div id="pagamentoPreviewAuto" class="auto-payment-preview"></div>
+        </div>
+
+        <div id="pagamentoManual" class="field hidden-field">
           <label for="pagamento">Conteúdo da Cláusula 2ª</label>
           <textarea id="pagamento" placeholder="Digite como foi combinado o pagamento."></textarea>
-          <div class="hint">O início da cláusula será inserido automaticamente.</div>
+          <div class="hint">No modo manual, a cláusula e o valor atualizado da dívida devem ser informados pelo funcionário.</div>
         </div>
       </div>
 
@@ -421,6 +525,13 @@ button{
           <input id="bloqueio" type="checkbox">
           <span>Há bloqueio judicial / SISBAJUD</span>
         </label>
+        <div id="valorBloqueadoBox" class="block-value-box hidden-field">
+          <div class="field" style="margin-bottom:0">
+            <label for="valorBloqueado">Valor bloqueado</label>
+            <input id="valorBloqueado" inputmode="decimal" placeholder="Ex.: 1.200,00">
+            <div class="hint">No modo automático, este valor será somado ao valor atualizado da dívida.</div>
+          </div>
+        </div>
         <div id="accountPreview" class="account-preview"></div>
       </div>
 
@@ -603,6 +714,116 @@ button{
     return page;
   }
 
+
+
+  function isoToday(){
+    const d=new Date();
+    const y=d.getFullYear();
+    const m=String(d.getMonth()+1).padStart(2,"0");
+    const day=String(d.getDate()).padStart(2,"0");
+    return `${y}-${m}-${day}`;
+  }
+
+  function sameDayNextMonthISO(){
+    const now=new Date();
+    const targetYear=now.getMonth()===11?now.getFullYear()+1:now.getFullYear();
+    const targetMonth=(now.getMonth()+1)%12;
+    const lastDay=new Date(targetYear,targetMonth+1,0).getDate();
+    const day=Math.min(now.getDate(),lastDay);
+    return `${targetYear}-${String(targetMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+  }
+
+  function paymentMode(){
+    const checked=document.querySelector('input[name="modoPagamento"]:checked');
+    return checked?checked.value:"automatico";
+  }
+
+  function blockedValue(){
+    return $("bloqueio").checked ? parseMoney($("valorBloqueado").value) : 0;
+  }
+
+  function automaticPaymentData(){
+    const entrada=parseMoney($("valorEntrada").value);
+    const qtd=Math.max(0,parseInt($("quantidadeParcelas").value||"0",10)||0);
+    const parcela=parseMoney($("valorParcela").value);
+    const dataEntrada=dateBR($("dataEntrada").value);
+    const primeira=dateBR($("primeiroVencimento").value);
+
+    let texto=`Através de uma entrada de ${formatMoney(entrada)} até os dias ${dataEntrada}, bem como o remanescente em ${qtd} parcelas iguais de ${formatMoney(parcela)} com o vencimento da primeira para o dia ${primeira} e as demais a cada 30 dias.`;
+
+    const bloqueado=blockedValue();
+    if($("bloqueio").checked && bloqueado>0){
+      texto+=` Além disso, ${$("genero").value==="f"?"a devedora":"o devedor"}, neste ato, concorda com o valor bloqueado de ${formatMoney(bloqueado)}, bem como autoriza que este valor seja transferido ao exequente via alvará como parte do pagamento do débito - não se confundindo com a entrada e/ou as parcelas pactuadas.`;
+    }
+
+    return {entrada,qtd,parcela,bloqueado,texto,total:entrada+(qtd*parcela)+bloqueado};
+  }
+
+  function updatePaymentUI(){
+    const automatico=paymentMode()==="automatico";
+    $("pagamentoAutomatico").classList.toggle("hidden-field",!automatico);
+    $("pagamentoManual").classList.toggle("hidden-field",automatico);
+
+    $("valor").readOnly=automatico;
+    $("valor").classList.toggle("readonly-value",automatico);
+
+    if(automatico){
+      const dados=automaticPaymentData();
+      $("valor").value=dados.total ? dados.total.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) : "";
+      $("pagamentoPreviewAuto").textContent=dados.texto;
+      $("valorHint").textContent="Calculado automaticamente: entrada + parcelas + eventual valor bloqueado.";
+    }else{
+      $("valorHint").textContent="No modo manual, informe o valor atualizado da dívida.";
+    }
+
+    $("valorBloqueadoBox").classList.toggle("hidden-field",!$("bloqueio").checked);
+    updateAccount();
+  }
+
+  const comarcaPorCodigo={
+    "0001":"COMARCA DE PORTO VELHO",
+    "0002":"COMARCA DE ARIQUEMES",
+    "0003":"COMARCA DE JARU",
+    "0004":"COMARCA DE OURO PRETO DO OESTE",
+    "0005":"COMARCA DE JI-PARANÁ",
+    "0006":"COMARCA DE PRESIDENTE MÉDICI",
+    "0007":"COMARCA DE CACOAL",
+    "0008":"COMARCA DE ESPIGÃO DO OESTE",
+    "0009":"COMARCA DE PIMENTA BUENO",
+    "0010":"COMARCA DE ROLIM DE MOURA",
+    "0011":"COMARCA DE ALVORADA DO OESTE",
+    "0012":"COMARCA DE COLORADO DO OESTE",
+    "0013":"COMARCA DE CEREJEIRAS",
+    "0014":"COMARCA DE VILHENA",
+    "0015":"COMARCA DE GUAJARÁ-MIRIM",
+    "0016":"COMARCA DE COSTA MARQUES",
+    "0017":"COMARCA DE ALTA FLORESTA DO OESTE",
+    "0018":"COMARCA DE SANTA LUZIA DO OESTE",
+    "0019":"COMARCA DE MACHADINHO DO OESTE",
+    "0020":"COMARCA DE NOVA BRASILÂNDIA DO OESTE",
+    "0021":"COMARCA DE BURITIS",
+    "0022":"COMARCA DE SÃO MIGUEL DO GUAPORÉ",
+    "0023":"COMARCA DE SÃO FRANCISCO DO GUAPORÉ",
+    "0024":"COMARCA DE NOVA MAMORÉ"
+  };
+
+  function enderecoAutomatico(numeroProcesso){
+    const numero=String(numeroProcesso||"").trim();
+    const match=numero.match(/(\d{4})$/);
+    if(!match){
+      return "Digite o número completo do processo para identificar automaticamente o endereçamento.";
+    }
+    const codigo=match[1];
+    if(codigo==="0000"){
+      return "Ao Núcleo de Justiça 4.0 - Execução de Título Extrajudicial.";
+    }
+    const comarca=comarcaPorCodigo[codigo];
+    if(comarca){
+      return `AO JUIZADO ESPECIAL CIVIL DA ${comarca} - ESTADO DE RONDÔNIA`;
+    }
+    return `ENDEREÇAMENTO NÃO IDENTIFICADO PARA O CÓDIGO ${codigo}`;
+  }
+
   function buildBlocks(){
     const female=$("genero").value==="f";
     const Devedor=female?"Devedora":"Devedor";
@@ -610,16 +831,32 @@ button{
     const Executado=female?"Executada":"Executado";
     const qualificada=female?"qualificada":"qualificado";
 
-    const end=esc($("enderecamento").value.trim()||"[ENDEREÇAMENTO]");
+    const enderecoGerado=enderecoAutomatico($("processo").value);
+    $("enderecamentoAuto").textContent=enderecoGerado;
+    const end=esc(enderecoGerado);
     const processo=esc($("processo").value.trim()||"[NÚMERO DO PROCESSO]");
     const empresa=esc($("empresa").value);
     const nome=esc($("devedor").value.trim()||"[NOME DO DEVEDOR]");
-    const value=parseMoney($("valor").value);
+    const automatico=paymentMode()==="automatico";
+    const dadosPagamento=automatico?automaticPaymentData():null;
+    const value=automatico?dadosPagamento.total:parseMoney($("valor").value);
+    if(automatico){
+      $("valor").value=value ? value.toLocaleString("pt-BR",{minimumFractionDigits:2,maximumFractionDigits:2}) : "";
+    }
     const valueFmt=formatMoney(value);
     const valueWords=moneyWords(value);
     const emissao=dateBR($("emissao").value);
     const vencimento=dateBR($("vencimento").value);
-    const custom=esc($("pagamento").value.trim()||"[DESCREVER A FORMA DE PAGAMENTO]").replace(/\n/g,"<br>");
+    let custom;
+    if(automatico){
+      custom=esc(dadosPagamento.texto);
+    }else{
+      custom=esc($("pagamento").value.trim()||"[DESCREVER A FORMA DE PAGAMENTO]").replace(/\n/g,"<br>");
+      const bloqueado=blockedValue();
+      if($("bloqueio").checked && bloqueado>0){
+        custom+=` Além disso, ${female?"a":"o"} ${devedor}, neste ato, concorda com o valor bloqueado de ${formatMoney(bloqueado)}, bem como autoriza que este valor seja transferido ao exequente via alvará como parte do pagamento do débito - não se confundindo com a entrada e/ou as parcelas pactuadas.`;
+      }
+    }
     const account=esc(accounts[$("conta").value]);
     const alvara=$("bloqueio").checked?" Servirá esta mesma conta para expedição do alvará de transferência.":"";
     const telComp=esc($("telefoneComprovante").value.trim()||"[TELEFONE]");
@@ -711,7 +948,19 @@ button{
   }
 
   $("conta").addEventListener("change",updateAccount);
-  $("bloqueio").addEventListener("change",updateAccount);
+  $("bloqueio").addEventListener("change",()=>{ updatePaymentUI(); generate(); });
+  $("valorBloqueado").addEventListener("input",()=>{ updatePaymentUI(); generate(); });
+  document.querySelectorAll('input[name="modoPagamento"]').forEach(el=>el.addEventListener("change",()=>{ updatePaymentUI(); generate(); }));
+  ["valorEntrada","dataEntrada","quantidadeParcelas","valorParcela","primeiroVencimento"].forEach(id=>{
+    $(id).addEventListener("input",()=>{ updatePaymentUI(); generate(); });
+    $(id).addEventListener("change",()=>{ updatePaymentUI(); generate(); });
+  });
+  $("genero").addEventListener("change",()=>{ updatePaymentUI(); generate(); });
+
+  if(!$("dataEntrada").value) $("dataEntrada").value=isoToday();
+  if(!$("primeiroVencimento").value) $("primeiroVencimento").value=sameDayNextMonthISO();
+  updatePaymentUI();
+
   $("gerar").addEventListener("click",generate);
   function asciiBytes(str){
     const out=new Uint8Array(str.length);
