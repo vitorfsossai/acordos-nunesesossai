@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Gerador de Petição Inicial - Execução de Título Extrajudicial</title>
+<title>Gerador de Petição Inicial - Execução / Cobrança</title>
 <style>
 :root{
   --navy:#031D38;
@@ -44,6 +44,9 @@ body{
   padding:18px;
   position:sticky;
   top:14px;
+  max-height:calc(100vh - 28px);
+  overflow-y:auto;
+  overscroll-behavior:contain;
 }
 .form-panel h2,.preview-head h2{margin:0;font-size:18px}
 .form-panel .desc,.preview-head p{
@@ -68,6 +71,50 @@ body{
   text-transform:uppercase;
   color:#65717c;
 }
+
+.action-choice{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:8px;
+}
+.action-choice label{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:11px;
+  border:1px solid #d6dce2;
+  border-radius:9px;
+  background:#f8fafb;
+  cursor:pointer;
+  font-size:12px;
+  line-height:1.25;
+}
+.action-choice input{width:auto;margin:0}
+.prescription-alert{
+  display:none;
+  margin-top:10px;
+  padding:11px 12px;
+  border-radius:9px;
+  border:1px solid #e0b14c;
+  background:#fff8e5;
+  color:#6c4c08;
+  font-size:12px;
+  line-height:1.45;
+  font-weight:700;
+}
+.prescription-alert.danger{
+  display:block;
+  border-color:#d86a6a;
+  background:#fff0f0;
+  color:#8a2020;
+}
+.prescription-alert.recommended{
+  display:block;
+  border-color:#d9b05a;
+  background:#fff8e5;
+  color:#6c4c08;
+}
+
 .field{margin-bottom:12px}
 .field:last-child{margin-bottom:0}
 label{
@@ -259,7 +306,7 @@ button{
 
 @media(max-width:1100px){
   .layout{grid-template-columns:1fr}
-  .form-panel{position:static}
+  .form-panel{position:static;max-height:none;overflow:visible}
 }
 
 /* ===== OTIMIZAÇÃO PARA CELULAR ===== */
@@ -372,13 +419,28 @@ button{
 <div class="app">
   <div class="topbar">
     <h1>Gerador de Petição Inicial</h1>
-    <p>Execução de Título Extrajudicial</p>
+    <p id="subtituloAcao">Execução de Título Extrajudicial</p>
   </div>
 
   <div class="layout">
     <aside class="form-panel">
       <h2>Dados da petição</h2>
       <p class="desc">Os campos fixos do modelo são preservados automaticamente.</p>
+
+      <div class="form-section">
+        <h3>Tipo de ação</h3>
+        <div class="action-choice">
+          <label>
+            <input type="radio" name="tipoAcao" value="execucao" checked>
+            <span>Execução de título extrajudicial</span>
+          </label>
+          <label>
+            <input type="radio" name="tipoAcao" value="cobranca">
+            <span>Ação de cobrança</span>
+          </label>
+        </div>
+        <div class="hint">A execução mantém o modelo atual. A cobrança utiliza o modelo específico do escritório.</div>
+      </div>
 
       <div class="form-section">
         <h3>Endereçamento</h3>
@@ -442,6 +504,7 @@ button{
             <input id="vencimento" type="date">
           </div>
         </div>
+        <div id="prescriptionAlert" class="prescription-alert" role="alert"></div>
         <div class="field">
           <label for="valorOriginal">Valor original da nota</label>
           <input id="valorOriginal" inputmode="decimal" placeholder="Ex.: 1.000,00">
@@ -572,6 +635,57 @@ button{
     return `${d.getDate()} de ${meses[d.getMonth()]} de ${d.getFullYear()}`;
   }
 
+  // Regra de exibição monetária: valores em reais devem aparecer com extenso,
+  // exceto quando estiverem dentro de tabelas, onde permanecem apenas no formato numérico.
+  function moneyWithWords(value){
+    const n=Number(value)||0;
+    return `${formatMoney(n)} (${moneyWords(n)})`;
+  }
+
+  function tipoAcaoAtual(){
+    const checked=document.querySelector('input[name="tipoAcao"]:checked');
+    return checked ? checked.value : "execucao";
+  }
+
+  function vencimentoMaisDeTresAnos(){
+    const value=$("vencimento").value;
+    if(!value) return false;
+
+    const partes=value.split("-").map(Number);
+    if(partes.length!==3) return false;
+
+    const venc=new Date(partes[0],partes[1]-1,partes[2],12,0,0,0);
+    if(Number.isNaN(venc.getTime())) return false;
+
+    const limite=new Date(venc.getFullYear()+3,venc.getMonth(),venc.getDate(),12,0,0,0);
+    const hoje=new Date();
+    const atual=new Date(hoje.getFullYear(),hoje.getMonth(),hoje.getDate(),12,0,0,0);
+
+    return atual.getTime() > limite.getTime();
+  }
+
+  function updatePrescriptionAlert(){
+    const box=$("prescriptionAlert");
+    if(!box) return;
+
+    if(!vencimentoMaisDeTresAnos()){
+      box.className="prescription-alert";
+      box.textContent="";
+      return;
+    }
+
+    const data=dateBR($("vencimento").value);
+    const cobranca=tipoAcaoAtual()==="cobranca";
+
+    if(cobranca){
+      box.className="prescription-alert recommended";
+      box.textContent=`Atenção: o vencimento da nota ocorreu em ${data} e já se passaram mais de 3 anos. A opção selecionada, Ação de Cobrança, é a recomendada para este caso.`;
+    }else{
+      box.className="prescription-alert danger";
+      box.textContent=`ATENÇÃO: o vencimento da nota ocorreu em ${data} e já se passaram mais de 3 anos desde o vencimento. A ação correta deverá ser, em regra, a Ação de Cobrança. Revise o tipo de ação antes de gerar a petição.`;
+    }
+  }
+
   function enderecamento(){
     if($("tipoEndereco").value==="nucleo"){
       return "AO NÚCLEO DE JUSTIÇA 4.0 - EXECUÇÃO DE TÍTULO EXTRAJUDICIAL ESTADO DE RONDÔNIA.";
@@ -620,14 +734,15 @@ button{
     return p;
   }
 
-  function buildBlocks(){
+  function buildExecutionBlocks(){
     const empresa=esc(companies[$("empresa").value]);
     const debtor=esc(dadosDevedor());
     const emissao=dateBR($("emissao").value);
     const vencimento=dateBR($("vencimento").value);
-    const original=formatMoney(parseMoney($("valorOriginal").value));
+    const valorOriginalNumero=parseMoney($("valorOriginal").value);
+    const original=moneyWithWords(valorOriginalNumero);
     const valorAtualizadoNumero=parseMoney($("valorAtualizado").value);
-    const atualizado=formatMoney(valorAtualizadoNumero);
+    const atualizado=moneyWithWords(valorAtualizadoNumero);
     const atualizadoExtenso=moneyWords(valorAtualizadoNumero);
     const endereco=esc(enderecamento());
 
@@ -642,7 +757,7 @@ button{
       {type:"table", html:`
         <table class="note-table">
           <thead><tr><th>Título</th><th>Emissão</th><th>Vencimento</th><th>Valor</th></tr></thead>
-          <tbody><tr><td>Promissória</td><td>${emissao}</td><td>${vencimento}</td><td>${original}</td></tr></tbody>
+          <tbody><tr><td>Promissória</td><td>${emissao}</td><td>${vencimento}</td><td>${formatMoney(valorOriginalNumero)}</td></tr></tbody>
         </table>
       `},
       {type:"p", html:`O crédito, devidamente atualizado, corresponde, atualmente, ao montante de ${atualizado} (${atualizadoExtenso})`, className:"indented"},
@@ -665,7 +780,7 @@ button{
       {type:"p", html:`d) Conforme elenca o artigo 782 Parágrafo 3 do Código de Processo Civil REQUER, seja determinado por Vossa Excelência a inclusão do executado em cadastro de inadimplentes.`},
       {type:"p", html:`Provar-se-á o alegado, por todos os meios de prova em direito admitidos, em especial, o documental; o testemunhal, cujo rol se apresentará em momento oportuno, dentre outros que o controvertido dos autos exigirem.`, className:"indented"},
       {type:"p", html:`Para tentativas de acordos, pagamentos, ou outras negociações, informa o seguinte número de contato (telefone/WhatsApp): 69 97400-4633`, className:"contact"},
-      {type:"p", html:`Dá-se a causa o valor ${atualizado} (${atualizadoExtenso}).`},
+      {type:"p", html:`Dá-se a causa o valor ${atualizado}`},
       {type:"closing", html:`
         <div class="closing">
           <div>Nestes termos,</div>
@@ -680,6 +795,65 @@ button{
         </div>
       `}
     ];
+  }
+
+  function buildCobrancaBlocks(){
+    const empresa=esc(companies[$("empresa").value]);
+    const debtor=esc(dadosDevedor());
+    const emissao=dateBR($("emissao").value);
+    const vencimento=dateBR($("vencimento").value);
+    const valorOriginalNumero=parseMoney($("valorOriginal").value);
+    const original=moneyWithWords(valorOriginalNumero);
+    const valorAtualizadoNumero=parseMoney($("valorAtualizado").value);
+    const atualizado=moneyWithWords(valorAtualizadoNumero);
+    const endereco=esc(enderecamento());
+
+    return [
+      {type:"p", html:`${endereco}`},
+      {type:"p", html:`${empresa}, vem, por meio dos seus advogados que esta subscreve, ingressar com`, className:"spaced-top"},
+      {type:"p", html:`AÇÃO DE COBRANÇA`, className:"petition-title"},
+      {type:"p", html:`em face de ${debtor}, consoante fatos e fundamentos que expõe a seguir:`},
+
+      {type:"p", html:`I – DOS FATOS`, className:"section-title"},
+      {type:"p", html:`A parte autora é credora do Requerido(a) na importância total de ${original} conforme demonstram as notas promissórias anexas, as quais formalizam a existência e a exigibilidade da dívida.`, className:"indented"},
+      {type:"p", html:`As referidas notas promissórias foram emitidas em favor da parte autora no dia ${emissao}, cujo vencimento se deu em ${vencimento}, estando desde então a Requerida em mora com a parte autora.`, className:"indented"},
+      {type:"p", html:`O valor corrigido e acrescido de juros da dívida, segundo a tabela do judiciário, perfaz o montante de ${atualizado}`, className:"indented"},
+      {type:"p", html:`Por diversas vezes o requerente tentou receber os valores que lhe eram devidos, procurando a Requerida e não obtendo nenhum êxito em suas tentativas, restando-lhe somente a via judicial.`, className:"indented"},
+
+      {type:"p", html:`II – DO DIREITO`, className:"section-title"},
+      {type:"p", html:`É certo que a inadimplência da Requerida configura ato ilícito, vez que causa prejuízos ao Requerente, devendo, portanto, promover a reparação por todos os danos causados, nos termos do artigo 389 do CC, artigo 186 combinado com o artigo 927 do Código Civil Brasileiro.`, className:"indented"},
+      {type:"p", html:`Prelecionam os citados artigos:`, className:"indented"},
+      {type:"p", html:`Art. 389. Não cumprida a obrigação, responde o devedor por perdas e danos, mais juros e atualização monetária segundo índices oficiais regularmente estabelecidos, e honorários de advogado.<br><br>Art. 186. Aquele que, por ação ou omissão voluntária, negligência ou imprudência, violar direito e causar dano a outrem, ainda que exclusivamente moral, comete ato ilícito.<br><br>Art. 927. Aquele que, por ato ilícito (arts. 186 e 187), causar dano a outrem, fica obrigado a repará-lo.`, className:"legal-quote"},
+      {type:"p", html:`Não há dúvidas que a ação voluntaria da Requerida, qual seja a inadimplência no cumprimento da sua obrigação de pagar, violou direito e causou danos a Autora, o qual encontra-se atrelado à contratação de advogados, dado ao princípio da causalidade.`, className:"indented"},
+      {type:"p", html:`Notório é que, além de causar danos ao Requerente, a inadimplência da Requerida lhe enseja enriquecimento ilícito pois que, uma vez recebido o produto, o utilizou da maneira que lhe era pretendida sem dispensar qualquer valor de pagamento por eles.`, className:"indented"},
+      {type:"p", html:`Pelo exposto, ficou comprovado o enriquecimento da Requerida, pois usufruiu dos produtos adquiridos, e não efetuou os pagamentos devidos ao Requerente que cumpriu com sua obrigação, portanto, conforme elenca ao artigo 884 do CC, faz jus ao Requerente o ressarcimento.`, className:"indented"},
+      {type:"p", html:`Art. 884. Aquele que, sem justa causa, se enriquecer à custa de outrem, será obrigado a restituir o indevidamente auferido, feita a atualização dos valores monetários.`, className:"legal-quote"},
+      {type:"p", html:`Assim, por força do artigo 927 do Código Civil, deve o Requerido ser condenada no adimplemento de sua obrigação, qual seja, pagar o valor devido ao Autor conforme constam das notas promissórias/duplicatas em anexo, as quais somam a quantia de ${atualizado}`, className:"indented"},
+
+      {type:"p", html:`III – DOS PEDIDOS`, className:"section-title"},
+      {type:"p", html:`Ante ao exposto, requer:`, className:"indented"},
+      {type:"p", html:`a) A CITAÇÃO da Requerida para que tome conhecimento da presente ação, e compareça em audiência de Conciliação a ser marcado por Vossa Excelência, apresentando, caso queira, CONTESTAÇÃO, sob pena de ser considerado Revel e sofrer os efeitos da Confissão ficta.`},
+      {type:"p", html:`b) Apresentando ou não a CONTESTAÇÃO a Requerida, que seja JULGADO TOTALMENTE PROCEDENTE o pedido da Requerente, Condenando a Requerida no pagamento da importância de ${atualizado} acrescidos de juros e correção monetária até a data da solvência do débito, bem como no pagamento das custas processuais e honorários advocatícios a serem arbitrados por Vossa Excelência;`},
+      {type:"p", html:`Pretende provar o alegado através de todos os meios admitidos em Direito, em especial a prova documental e depoimento pessoal da Requerida.`, className:"indented"},
+      {type:"p", html:`Dá-se à causa o valor de ${atualizado}`},
+      {type:"closing", html:`
+        <div class="closing">
+          <div>Nestes termos,</div>
+          <div>Pede e espera deferimento.</div>
+          <div style="margin-top:8mm">Cacoal/RO, ${todayLong()}.</div>
+        </div>
+      `},
+      {type:"lawyers", html:`
+        <div class="lawyers">
+          <div>VITOR FERRARI SOSSAI<br>OAB/RO 11.503</div>
+          <div>LUIZ EDUARDO NUNES TEIXEIRA<br>OAB/RO 11.778</div>
+        </div>
+      `}
+    ];
+  }
+
+  function buildBlocks(){
+    return tipoAcaoAtual()==="cobranca" ? buildCobrancaBlocks() : buildExecutionBlocks();
   }
 
   function appendPage(pages,page){
@@ -751,6 +925,14 @@ button{
   function updateConditionalFields(){
     $("comarcaWrap").classList.toggle("hidden",$("tipoEndereco").value!=="comarca");
     $("empresaPreview").textContent=companies[$("empresa").value];
+
+    const cobranca=tipoAcaoAtual()==="cobranca";
+    $("subtituloAcao").textContent=cobranca ? "Ação de Cobrança" : "Execução de Título Extrajudicial";
+    document.title=cobranca
+      ? "Gerador de Petição Inicial - Ação de Cobrança"
+      : "Gerador de Petição Inicial - Execução de Título Extrajudicial";
+
+    updatePrescriptionAlert();
   }
 
   function generate(){
@@ -955,6 +1137,20 @@ button{
       btn.textContent=oldText;
     }
   }
+
+  document.querySelectorAll('input[name="tipoAcao"]').forEach(el=>{
+    el.addEventListener("change",()=>{
+      updateConditionalFields();
+      generate();
+    });
+  });
+
+  $("vencimento").addEventListener("change",()=>{
+    updatePrescriptionAlert();
+  });
+  $("vencimento").addEventListener("input",()=>{
+    updatePrescriptionAlert();
+  });
 
   $("tipoEndereco").addEventListener("change",()=>{
     updateConditionalFields();
